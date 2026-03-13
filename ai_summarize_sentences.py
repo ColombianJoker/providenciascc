@@ -101,6 +101,19 @@ def main():
         default=False,
         help=argparse.SUPPRESS,
     )
+    parser.add_argument(
+        "--check-pdf",
+        action="store_true",
+        default=False,
+        help="Check the result of the PDF creation",
+    )
+    parser.add_argument(
+        "--macports-lib",
+        action="store",
+        type=str,
+        default="/opt/local/lib",
+        help=argparse.SUPPRESS,
+    )
     args = parser.parse_args()
 
     # 2. Load System Instructions
@@ -112,6 +125,8 @@ def main():
         )
         return
     system_instruction = system_path.read_text(encoding="utf-8")
+    if args.DEBUG:
+        print(f"{prg_name}: '{args.system}' loaded", file=sys.stderr)
 
     # Authenticate
     api_key = os.environ.get("GEMINI_API_KEY")
@@ -119,15 +134,27 @@ def main():
         print("Error: GEMINI_API_KEY not found in environment.", file=sys.stderr)
         return
     client = genai.Client(api_key=api_key)
+    if args.DEBUG:
+        print(f"{prg_name}: 'GEMINI_APY_KEY' read", file=sys.stderr)
 
     # Preparar directorios de salida
     md_output_path = Path(args.md_dir) if args.md_dir else None
     if md_output_path:
         md_output_path.mkdir(parents=True, exist_ok=True)
+        if args.DEBUG:
+            print(
+                f"{prg_name}: will use '{md_output_path}' for summaries",
+                file=sys.stderr,
+            )
 
     pdf_output_path = Path(args.pdf_dir) if args.pdf_dir else None
     if pdf_output_path:
         pdf_output_path.mkdir(parents=True, exist_ok=True)
+        if args.DEBUG:
+            print(
+                f"{prg_name}: will use '{pdf_output_path}' for PDFs",
+                file=sys.stderr,
+            )
 
     for file_str in tqdm(args.files, desc="Processing", unit="file"):
         file_path = Path(file_str)
@@ -150,6 +177,8 @@ def main():
         success = False
         retries = 0
         while not success and retries < 3:
+            if args.DEBUG:
+                tqdm.write(f"DEBUG:  '{file_path}' ...")
             try:
                 response = client.models.generate_content(
                     model=args.model,
@@ -188,23 +217,60 @@ def main():
                 if pdf_output_path:
                     output_pdf = pdf_output_path / (file_path.stem + ".pdf")
                     if not output_pdf.exists() or args.force_summary:
-                        try:
-                            subprocess.run(
-                                [
-                                    "pandoc",
-                                    str(output_md),
-                                    "-o",
-                                    str(output_pdf),
-                                    "--pdf-engine=weasyprint",
-                                ],
-                                check=True,
-                                capture_output=True,
+                        pdf_cmd = [
+                            "pandoc",
+                            str(output_md),
+                            "-o",
+                            str(output_pdf),
+                            "--pdf-engine=weasyprint",
+                        ]
+
+                        # Preparar el ambiente
+                        local_env = os.environ.copy()
+                        # Agrego la ruta de MacPorts
+                        macports_lib = args.macports_lib
+                        if "DYLD_LIBRARY_PATH" in local_env:
+                            local_env["DYLD_LIBRARY_PATH"] = (
+                                f"{macports_lib}:{local_env['DYLD_LIBRARY_PATH']}"
                             )
+                        else:
+                            local_env["DYLD_LIBRARY_PATH"] = macports_lib
+                        if args.DEBUG:
+                            tqdm.write(f"DEBUG: {pdf_cmd=}")
+
+                        try:
+                            # Ejecutamos capturando stdout y stderr
+                            result = subprocess.run(
+                                pdf_cmd,
+                                check=args.check_pdf,
+                                capture_output=True,
+                                text=True,  # Para recibir strings en lugar de bytes
+                                env=local_env,  # Pasar con DYLD_LIBRARY_PATH
+                            )
+
                             if args.verbose:
                                 tqdm.write(f"PDF generado: {output_pdf.name}")
-                        except Exception as pe:
-                            tqdm.write(f"Error en PDF ({file_path.name}): {pe}")
 
+                            # Si DEBUG está activo, guardamos el log
+                            if args.DEBUG:
+                                log_file = output_pdf.with_suffix(".log")
+                                # Combinamos stdout y stderr para el log
+                                log_content = f"STDOUT:\n{result.stdout}\n\nSTDERR:\n{result.stderr}"
+                                log_file.write_text(log_content, encoding="utf-8")
+
+                        except subprocess.CalledProcessError as cpe:
+                            tqdm.write(f"Error en PDF ({file_path.name}): {cpe}")
+                            # Incluso si falla, si hay DEBUG, guardamos lo que alcanzó a capturar
+                            if args.DEBUG:
+                                log_file = output_pdf.with_suffix(".log")
+                                log_file.write_text(
+                                    f"ERROR LOG:\n{cpe.stdout}\n{cpe.stderr}",
+                                    encoding="utf-8",
+                                )
+                        except Exception as pe:
+                            tqdm.write(
+                                f"Error inesperado en PDF ({file_path.name}): {pe}"
+                            )
                 success = True
                 if args.delay > 0:
                     time.sleep(args.delay)
