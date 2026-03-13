@@ -9,6 +9,7 @@
 
 import argparse
 import os
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -45,7 +46,7 @@ def main():
         "-F",
         action="store_true",
         default=False,
-        help="Force overwriting of .summary.txt files",
+        help="Force overwriting of files",
     )
     parser.add_argument(
         "--verbose",
@@ -66,7 +67,7 @@ def main():
         action="store",
         type=str,
         default=".summary.md",
-        help="Suffix to append (from base file) to the summary",
+        help="Suffix to append to the summary",
     )
     parser.add_argument(
         "--model",
@@ -74,6 +75,18 @@ def main():
         type=str,
         default="gemini-2.5-flash",
         help="Gemini model to use",
+    )
+    parser.add_argument(
+        "--md-dir",
+        action="store",
+        type=str,
+        help="Directory to store the generated .md files",
+    )
+    parser.add_argument(
+        "--pdf-dir",
+        action="store",
+        type=str,
+        help="Directory to store the generated .pdf files",
     )
     parser.add_argument(
         "--min-size",
@@ -99,67 +112,45 @@ def main():
         )
         return
     system_instruction = system_path.read_text(encoding="utf-8")
-    if args.verbose or args.DEBUG:
-        print(f"{prg_name}: '{args.system}' cargado.", file=sys.stderr)
 
-    # Authenticate with Google Gemini
-    # Client looks for GEMINI_API_KEY in environment variables
-    try:
-        api_key = os.environ.get("GEMINI_API_KEY")
-        if not api_key:
-            print("Error: GEMINI_API_KEY not found in environment.", file=sys.stderr)
-            return
-
-        client = genai.Client(api_key=api_key)
-        if args.verbose or args.DEBUG:
-            print(f"{prg_name}: got and read the API key.", file=sys.stderr)
-    except Exception as e:
-        print(f"Authentication Error: {e}", file=sys.stderr)
+    # Authenticate
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        print("Error: GEMINI_API_KEY not found in environment.", file=sys.stderr)
         return
+    client = genai.Client(api_key=api_key)
 
-    if args.DEBUG:
-        print(f"{prg_name}: using {args.model} model", file=sys.stderr)
-        print(
-            f"{prg_name}: using '{args.suffix}' to append to summary name",
-            file=sys.stderr,
-        )
-    if args.force_summary:
-        print(f"{prg_name}: overwriting summaries.", file=sys.stderr)
+    # Preparar directorios de salida
+    md_output_path = Path(args.md_dir) if args.md_dir else None
+    if md_output_path:
+        md_output_path.mkdir(parents=True, exist_ok=True)
 
-    for file_str in tqdm(args.files, desc="Summarizing", unit="file"):
-        if args.DEBUG:
-            print(f"{prg_name}: '{file_str=}'", file=sys.stderr)
+    pdf_output_path = Path(args.pdf_dir) if args.pdf_dir else None
+    if pdf_output_path:
+        pdf_output_path.mkdir(parents=True, exist_ok=True)
+
+    for file_str in tqdm(args.files, desc="Processing", unit="file"):
         file_path = Path(file_str)
         if not file_path.exists():
             continue
-        if args.verbose:
-            tqdm.write(
-                f"{prg_name}:  '{file_path}'  ....",
-            )
-        # Resume logic: skip if already done
-        output_file = file_path.with_suffix(args.suffix)
-        if output_file.exists() and (not args.force_summary):
-            if args.verbose:
-                tqdm.write(
-                    f"{prg_name}: '{output_file}' exists and overwriting...",
-                )
+
+        # Definir ruta del archivo .md
+        if md_output_path:
+            output_md = md_output_path / (file_path.stem + args.suffix)
+        else:
+            output_md = file_path.with_suffix(args.suffix)
+
+        # Lógica de salto (Resume)
+        if output_md.exists() and (not args.force_summary):
             continue
-        file_size = file_path.stat().st_size
-        if file_size < args.min_size:
-            if args.verbose or args.DEBUG:
-                tqdm.write(
-                    f"{prg_name}: skipping '{file_path.name}' ({file_size} bytes) - below min size {args.min_size}."
-                )
+
+        if file_path.stat().st_size < args.min_size:
             continue
+
         success = False
         retries = 0
         while not success and retries < 3:
             try:
-                if args.DEBUG:
-                    tqdm.write(
-                        f"DEBUG: sending '{file_path.name}' to Gemini...",
-                    )
-
                 response = client.models.generate_content(
                     model=args.model,
                     config=types.GenerateContentConfig(
@@ -174,56 +165,56 @@ def main():
                     ],
                 )
 
+                # Filtrado de contenido
                 header = f"# {file_path.stem}\n\n---\n\n"
                 if not args.introduction:
-                    # --- Lógica de filtrado ---
-                    full_text = response.text
-                    lines = full_text.splitlines()
+                    lines = response.text.splitlines()
                     filtered_lines = []
                     found_start = False
-
                     for line in lines:
-                        # Si ya encontramos el inicio o la línea actual empieza con "1."
                         if found_start or line.strip().startswith("1."):
                             found_start = True
                             filtered_lines.append(line)
-
-                    # Unir las líneas filtradas o usar el texto original si no se encontró el patrón
-                    filtered_text = (
-                        "\n".join(filtered_lines) if filtered_lines else full_text
+                    content = (
+                        "\n".join(filtered_lines) if filtered_lines else response.text
                     )
-
-                    # Guardar con encabezado y línea en blanco
-                    output_file.write_text(header + filtered_text, encoding="utf-8")
                 else:
-                    # Guardar texto completo con encabezado y línea en blanco
-                    output_file.write_text(header + response.text, encoding="utf-8")
-                success = True
+                    content = response.text
 
+                # Guardar Markdown
+                output_md.write_text(header + content, encoding="utf-8")
+
+                # --- Generación de PDF si se solicita ---
+                if pdf_output_path:
+                    output_pdf = pdf_output_path / (file_path.stem + ".pdf")
+                    if not output_pdf.exists() or args.force_summary:
+                        try:
+                            subprocess.run(
+                                [
+                                    "pandoc",
+                                    str(output_md),
+                                    "-o",
+                                    str(output_pdf),
+                                    "--pdf-engine=weasyprint",
+                                ],
+                                check=True,
+                                capture_output=True,
+                            )
+                            if args.verbose:
+                                tqdm.write(f"PDF generado: {output_pdf.name}")
+                        except Exception as pe:
+                            tqdm.write(f"Error en PDF ({file_path.name}): {pe}")
+
+                success = True
                 if args.delay > 0:
                     time.sleep(args.delay)
 
             except Exception as e:
                 err_str = str(e)
-
-                # 1. Provide detailed output if DEBUG is on
-                if args.DEBUG:
-                    tqdm.write(f"\n--- DEBUG API ERROR FOR {file_path.name} ---")
-                    tqdm.write(err_str)
-                    tqdm.write("-------------------------------------------\n")
-
-                # 2. Hard Stop for Quota Issues
                 if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
-                    tqdm.write(
-                        f"\n[QUOTA EXCEEDED] Proceso detenido. Verifique su cuenta de facturación."
-                    )
+                    tqdm.write("[QUOTA EXCEEDED] Deteniendo...")
                     sys.exit(1)
-
-                # 3. Standard error handling
                 retries += 1
-                tqdm.write(
-                    f"Error processing '{file_path.name}': (Retry {retries}/3). Sleeping {args.error_sleep}s..."
-                )
                 time.sleep(args.error_sleep)
 
 
