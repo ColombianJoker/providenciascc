@@ -61,6 +61,14 @@ def main():
         help=argparse.SUPPRESS,
     )
     parser.add_argument(
+        "--suffix",
+        "-S",
+        action="store",
+        type=str,
+        default=".summary.md",
+        help="Suffix to append (from base file) to the summary",
+    )
+    parser.add_argument(
         "--model",
         action="store",
         type=str,
@@ -108,7 +116,7 @@ def main():
         if args.verbose:
             print(f"{prg_name}: procesando {file_path}.", file=sys.stderr)
         # Resume logic: skip if already done
-        output_file = file_path.with_suffix(".summary.md")
+        output_file = file_path.with_suffix(args.suffix)
         if output_file.exists() and (not args.force_summary):
             if args.verbose:
                 print(
