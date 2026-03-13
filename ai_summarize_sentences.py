@@ -32,6 +32,12 @@ def main():
     parser.add_argument(
         "--system", "-s", default="system.md", help="Path to system instruction file"
     )
+    parser.add_argument(
+        "--error-sleep",
+        type=float,
+        default=30.0,
+        help="Seconds to wait after a non-fatal error",
+    )
     args = parser.parse_args()
 
     # 2. Load System Instructions
@@ -57,52 +63,57 @@ def main():
         print(f"Authentication Error: {e}", file=sys.stderr)
         return
 
-    # 4. Processing Loop
+    # Ensure sys is imported at the top of your file
     for file_str in tqdm(args.files, desc="Summarizing", unit="file"):
         file_path = Path(file_str)
         if not file_path.exists():
             continue
 
-        try:
-            # Determine MIME type based on extension
-            ext = file_path.suffix.lower()
-            mime_map = {
-                ".pdf": "application/pdf",
-                ".html": "text/html",
-                ".txt": "text/plain",
-            }
-            mime_type = mime_map.get(ext, "text/plain")
+        # Resume logic: skip if already done
+        output_file = file_path.with_suffix(".summary.txt")
+        if output_file.exists():
+            continue
 
-            # Send to Gemini
-            response = client.models.generate_content(
-                model="gemini-2.0-flash",
-                config=types.GenerateContentConfig(
-                    system_instruction=system_instruction,
-                    temperature=0.1,  # Keep it deterministic for legal summaries
-                ),
-                contents=[
-                    types.Part.from_bytes(
-                        data=file_path.read_bytes(), mime_type=mime_type
+        success = False
+        retries = 0
+        while not success and retries < 3:
+            try:
+                response = client.models.generate_content(
+                    model="gemini-2.0-flash",
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_instruction,
+                        temperature=0.1,
                     ),
-                    "Please provide the summary of this sentence as instructed in the system setup.",
-                ],
-            )
+                    contents=[
+                        types.Part.from_bytes(
+                            data=file_path.read_bytes(), mime_type="text/html"
+                        ),
+                        "Please provide the summary of this sentence as instructed in the system setup.",
+                    ],
+                )
+                output_file.write_text(response.text, encoding="utf-8")
+                success = True
 
-            # Save results
-            output_file = file_path.with_suffix(".summary.txt")
-            output_file.write_text(response.text, encoding="utf-8")
+                # Normal delay between successful requests
+                if args.delay > 0:
+                    time.sleep(args.delay)
 
-            # 5. Delay to manage rate limits
-            if args.delay > 0:
-                time.sleep(args.delay)
+            except Exception as e:
+                err_str = str(e)
 
-        except Exception as e:
-            tqdm.write(f"Error processing {file_path.name}: {e}", file=sys.stderr)
+                # Hard Stop: Specific Quota Exhaustion
+                if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
+                    tqdm.write(
+                        f"\n[QUOTA EXCEEDED] Stopping process to protect your account."
+                    )
+                    sys.exit(1)
 
-    print(
-        f"\nProcessing complete. Summaries saved in the source directory.",
-        file=sys.stderr,
-    )
+                # Soft Retry: For temporary errors (500, 503, timeouts)
+                retries += 1
+                tqdm.write(
+                    f"Error processing {file_path.name}: (Retry {retries}/3). Waiting {args.error_sleep}s..."
+                )
+                time.sleep(args.error_sleep)
 
 
 if __name__ == "__main__":
