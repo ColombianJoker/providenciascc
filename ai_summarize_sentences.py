@@ -50,7 +50,7 @@ def main():
         return
     system_instruction = system_path.read_text(encoding="utf-8")
 
-    # 3. Authenticate with Google Gemini
+    # Authenticate with Google Gemini
     # Client looks for GEMINI_API_KEY in environment variables
     try:
         api_key = os.environ.get("GEMINI_API_KEY")
@@ -63,7 +63,6 @@ def main():
         print(f"Authentication Error: {e}", file=sys.stderr)
         return
 
-    # Ensure sys is imported at the top of your file
     for file_str in tqdm(args.files, desc="Summarizing", unit="file"):
         file_path = Path(file_str)
         if not file_path.exists():
