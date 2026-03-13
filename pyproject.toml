@@ -1,0 +1,9 @@
+[project]
+name = "providencias"
+version = "0.1.0"
+description = "Script para descargar providencias de la CCons en PDF"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "openpyxl",
+]
