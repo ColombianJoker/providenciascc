@@ -82,6 +82,12 @@ def main():
         default=1025,
         help=argparse.SUPPRESS,
     )
+    parser.add_argument(
+        "--introduction",
+        action="store_true",
+        default=False,
+        help=argparse.SUPPRESS,
+    )
     args = parser.parse_args()
 
     # 2. Load System Instructions
@@ -167,7 +173,31 @@ def main():
                         "Summarize this sentence as per system instructions.",
                     ],
                 )
-                output_file.write_text(response.text, encoding="utf-8")
+
+                header = f"# {file_path.stem}\n\n---\n\n"
+                if not args.introduction:
+                    # --- Lógica de filtrado ---
+                    full_text = response.text
+                    lines = full_text.splitlines()
+                    filtered_lines = []
+                    found_start = False
+
+                    for line in lines:
+                        # Si ya encontramos el inicio o la línea actual empieza con "1."
+                        if found_start or line.strip().startswith("1."):
+                            found_start = True
+                            filtered_lines.append(line)
+
+                    # Unir las líneas filtradas o usar el texto original si no se encontró el patrón
+                    filtered_text = (
+                        "\n".join(filtered_lines) if filtered_lines else full_text
+                    )
+
+                    # Guardar con encabezado y línea en blanco
+                    output_file.write_text(header + filtered_text, encoding="utf-8")
+                else:
+                    # Guardar texto completo con encabezado y línea en blanco
+                    output_file.write_text(header + response.text, encoding="utf-8")
                 success = True
 
                 if args.delay > 0:
