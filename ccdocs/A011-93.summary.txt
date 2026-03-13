@@ -1,0 +1,42 @@
+Analizando el Auto No. 011/93 de la Corte Constitucional, desde la perspectiva de un abogado especialista en derecho procesal, administrativo y constitucional en Colombia, se presenta el siguiente resumen:
+
+### 1. Síntesis de los hechos
+
+La señora María Luisa Bernal Mahe, en representación legal de las sociedades "RADIO SANTA FE LTDA." y "BLANCA BERNAL Y COMPAÑÍA S. EN C.", interpuso una acción de tutela. El objetivo era proteger los derechos fundamentales al debido proceso, la intimidad y la reserva de los libros de contabilidad (Art. 15 C.N. y Código de Comercio) de dichas sociedades.
+
+La tutela se dirigió contra un auto proferido por el Juez Veintiuno (21) de Familia de Santafé de Bogotá. Este auto había decretado una inspección judicial sobre *todos* los libros de contabilidad y declaraciones de renta de las mencionadas firmas, en el marco de un proceso de separación de cuerpos entre Blanca Bernal de Montoya y Santiago Montoya.
+
+El fallo de primera instancia de la acción de tutela, emitido por la Sala Civil del Tribunal Superior de Santafé de Bogotá, resolvió:
+*   Rechazar *in limine* (de plano) la petición de tutela por considerarla improcedente.
+*   Advertir a las partes que contra esta providencia "no procede impugnación alguna".
+*   Remitir la actuación a la Corte Constitucional para su eventual revisión.
+
+### 2. Los defectos configurados de la providencia entutelada (el fallo del Tribunal Superior)
+
+La Corte Constitucional identificó graves defectos en el fallo de primera instancia proferido por la Sala Civil del Tribunal Superior de Santafé de Bogotá:
+
+*   **Violación del derecho fundamental a la impugnación y a la doble instancia:** El Tribunal prohibió expresamente la impugnación de su fallo, desconociendo preceptos constitucionales y legales.
+    *   **Fundamento Constitucional:** Los artículos 31 (doble instancia para toda sentencia judicial, salvo excepciones legales que no aplican a la tutela), 86 (derecho a impugnar el fallo de tutela) y 229 (acceso a la administración de justicia, que incluye el derecho a impugnar decisiones adversas) de la Constitución Política.
+    *   **Fundamento Legal:** Los artículos 31 y 32 del Decreto 2591 de 1991, que regulan explícitamente el derecho a impugnar los fallos de tutela en primera instancia.
+    *   La Corte enfatizó que el derecho a impugnar es de naturaleza constitucional fundamental y legal, y su ejercicio no depende de la procedencia o improcedencia de la acción. No existen excepciones para prohibir la impugnación de un fallo de tutela, incluso si este es un rechazo *in limine*.
+
+*   **Error en el rechazo *in limine* de la tutela contra actuaciones judiciales:** El Tribunal rechazó de plano la tutela sin un estudio de fondo.
+    *   La Corte reiteró su jurisprudencia (Sentencia C-543 de 1992) que, si bien la tutela es improcedente contra *sentencias* judiciales, sí es viable contra *actuaciones judiciales* (diferentes a sentencias) cuando se configura una "vía de hecho" o se puede causar un "perjuicio irremediable".
+    *   En estos casos, no es apropiado rechazar *in limine* la tutela, ya que se requiere un análisis de fondo para determinar si se violaron derechos fundamentales por la ocurrencia de una vía de hecho o un perjuicio irremediable. El Tribunal omitió este estudio sustancial.
+
+*   **Pretermisión de una instancia:** Al prohibir la impugnación, el Tribunal pretermitió una instancia procesal, lo que configura una causal de nulidad, aplicable por analogía con el artículo 140, numeral 3º del Código de Procedimiento Civil.
+
+### 3. Decisión de la Corte Constitucional
+
+La Sala Segunda de Revisión de la Corte Constitucional resolvió:
+
+*   **PRIMERO:** Abstenerse de efectuar la revisión de fondo del fallo proferido por la Sala Civil del Tribunal Superior del Distrito Judicial de Santafé de Bogotá, debido a la pretermisión de una instancia.
+*   **SEGUNDO:** Declarar la nulidad del numeral segundo de la parte resolutiva del fallo del Tribunal, es decir, la parte que dispuso: "2o. Advertir a las partes que contra esta providencia no procede impugnación alguna".
+*   **TERCERO:** Ordenar a la Sala Civil del Tribunal Superior del Distrito Judicial de Santafé de Bogotá que notifique nuevamente la sentencia de primera instancia a las partes, junto con este Auto, para que la parte interesada, si lo desea, pueda hacer uso de su derecho constitucional fundamental de impugnar el fallo.
+*   **CUARTO:** La sentencia del Tribunal (y la que profiera la Corte Suprema de Justicia, si fuere el caso de impugnación) deberá ser remitida a la Corte Constitucional en los términos previstos por el Decreto 2591 de 1991, para su eventual revisión.
+
+### 4. Conclusión
+
+Este Auto de la Corte Constitucional es un hito fundamental en la consolidación del derecho procesal constitucional colombiano. Reafirma con contundencia la naturaleza fundamental del derecho a la impugnación en la acción de tutela, garantizando la doble instancia como pilar del debido proceso y el acceso efectivo a la administración de justicia.
+
+La Corte corrige un grave error del Tribunal Superior, que no solo desconoció la posibilidad de impugnar un fallo de tutela (incluso si es un rechazo *in limine*), sino que también omitió el estudio de fondo requerido para determinar la existencia de una "vía de hecho" o "perjuicio irremediable" en actuaciones judiciales. Al declarar la nulidad de la providencia del Tribunal y ordenar la reposición de la actuación para permitir la impugnación, la Corte protege la integridad del procedimiento de tutela y asegura que los jueces de instancia cumplan con sus deberes constitucionales y legales, evitando la pretermisión de instancias y garantizando la plena efectividad de los derechos fundamentales. Este Auto subraya que la tutela contra actuaciones judiciales exige un análisis material y no meramente formal, especialmente cuando se alegan vulneraciones graves como las vías de hecho.

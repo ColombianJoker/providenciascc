@@ -17,6 +17,8 @@ from google import genai
 from google.genai import types
 from tqdm import tqdm
 
+prg_name = "Sentences summarizer"
+
 
 def main():
     # Process Command Line Arguments
@@ -38,6 +40,33 @@ def main():
         default=30.0,
         help="Seconds to wait after a non-fatal error",
     )
+    parser.add_argument(
+        "--force-summary",
+        "-F",
+        action="store_true",
+        default=False,
+        help="Force overwriting of .summary.txt files",
+    )
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        default=False,
+        help="Show messages",
+    )
+    parser.add_argument(
+        "--DEBUG",
+        action="store_true",
+        default=False,
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--model",
+        action="store",
+        type=str,
+        default="gemini-2.5-flash",
+        help="Gemini model to use",
+    )
     args = parser.parse_args()
 
     # 2. Load System Instructions
@@ -49,6 +78,8 @@ def main():
         )
         return
     system_instruction = system_path.read_text(encoding="utf-8")
+    if args.verbose or args.DEBUG:
+        print(f"{prg_name}: '{args.system}' cargado.", file=sys.stderr)
 
     # Authenticate with Google Gemini
     # Client looks for GEMINI_API_KEY in environment variables
@@ -59,26 +90,42 @@ def main():
             return
 
         client = genai.Client(api_key=api_key)
+        if args.verbose or args.DEBUG:
+            print(f"{prg_name}: API key obtenida.", file=sys.stderr)
     except Exception as e:
         print(f"Authentication Error: {e}", file=sys.stderr)
         return
 
+    if args.force_summary:
+        print(f"{prg_name}: sobreescribiendo resúmenes.", file=sys.stderr)
+
     for file_str in tqdm(args.files, desc="Summarizing", unit="file"):
+        if args.DEBUG:
+            print(f"{prg_name}: '{file_str=}'", file=sys.stderr)
         file_path = Path(file_str)
         if not file_path.exists():
             continue
-
+        if args.verbose:
+            print(f"{prg_name}: procesando {file_path}.", file=sys.stderr)
         # Resume logic: skip if already done
-        output_file = file_path.with_suffix(".summary.txt")
-        if output_file.exists():
+        output_file = file_path.with_suffix(".summary.md")
+        if output_file.exists() and (not args.force_summary):
+            if args.verbose:
+                print(
+                    f"{prg_name}: {output_file} existe y no sobreescribiendo.",
+                    file=sys.stderr,
+                )
             continue
 
         success = False
         retries = 0
         while not success and retries < 3:
             try:
+                if args.DEBUG:
+                    tqdm.write(f"DEBUG: Enviando '{file_path.name}' a Gemini...")
+
                 response = client.models.generate_content(
-                    model="gemini-2.0-flash",
+                    model=args.model,
                     config=types.GenerateContentConfig(
                         system_instruction=system_instruction,
                         temperature=0.1,
@@ -87,30 +134,35 @@ def main():
                         types.Part.from_bytes(
                             data=file_path.read_bytes(), mime_type="text/html"
                         ),
-                        "Please provide the summary of this sentence as instructed in the system setup.",
+                        "Summarize this sentence as per system instructions.",
                     ],
                 )
                 output_file.write_text(response.text, encoding="utf-8")
                 success = True
 
-                # Normal delay between successful requests
                 if args.delay > 0:
                     time.sleep(args.delay)
 
             except Exception as e:
                 err_str = str(e)
 
-                # Hard Stop: Specific Quota Exhaustion
+                # 1. Provide detailed output if DEBUG is on
+                if args.DEBUG:
+                    tqdm.write(f"\n--- DEBUG API ERROR FOR {file_path.name} ---")
+                    tqdm.write(err_str)
+                    tqdm.write("-------------------------------------------\n")
+
+                # 2. Hard Stop for Quota Issues
                 if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
                     tqdm.write(
-                        f"\n[QUOTA EXCEEDED] Stopping process to protect your account."
+                        f"\n[QUOTA EXCEEDED] Proceso detenido. Verifique su cuenta de facturación."
                     )
                     sys.exit(1)
 
-                # Soft Retry: For temporary errors (500, 503, timeouts)
+                # 3. Standard error handling
                 retries += 1
                 tqdm.write(
-                    f"Error processing {file_path.name}: (Retry {retries}/3). Waiting {args.error_sleep}s..."
+                    f"Error processing {file_path.name}: (Retry {retries}/3). Sleeping {args.error_sleep}s..."
                 )
                 time.sleep(args.error_sleep)
 
