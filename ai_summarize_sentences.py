@@ -19,7 +19,7 @@ from tqdm import tqdm
 
 
 def main():
-    # 1. Process Command Line Arguments
+    # Process Command Line Arguments
     parser = argparse.ArgumentParser(
         description="Process Colombian Constitutional Court sentences with Gemini."
     )
