@@ -1,4 +1,4 @@
-# providenciascc
+# providenciascc + ai_summarize_sentences
 
 Scripts de Python para:
 
