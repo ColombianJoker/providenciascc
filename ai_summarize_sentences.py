@@ -169,11 +169,16 @@ def main():
                 f"{prg_name}: will use '{pdf_output_path}' for PDFs",
                 file=sys.stderr,
             )
-    if args.DEBUG and args.pdf_dir:
+    if args.DEBUG:
         print(
-            f"{prg_name}: using {args.libpath_var} for shared objects",
+            f"{prg_name}: using '{args.model}'",
             file=sys.stderr,
         )
+        if args.pdf_dir:
+            print(
+                f"{prg_name}: using {args.libpath_var} for shared objects",
+                file=sys.stderr,
+            )
     for file_str in tqdm(args.files, desc="Processing", unit="file"):
         file_path = Path(file_str)
         if not file_path.exists():
