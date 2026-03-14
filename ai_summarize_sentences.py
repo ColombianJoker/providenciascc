@@ -93,7 +93,7 @@ def main():
         action="store",
         type=int,
         default=1025,
-        help=argparse.SUPPRESS,
+        help="Minimum size (in bytes) for a valid file to process",
     )
     parser.add_argument(
         "--introduction",
@@ -114,6 +114,20 @@ def main():
         default="/opt/local/lib",
         help=argparse.SUPPRESS,
     )
+    parser.add_argument(
+        "--key-var",
+        action="store",
+        type=str,
+        default="GEMINI_API_KEY",
+        help="Environment variable to load for API key",
+    )
+    parser.add_argument(
+        "--libpath-var",
+        action="store",
+        type=str,
+        default="DYLD_LIBRARY_PATH",
+        help="Library search path (used by the PDF creation tool)",
+    )
     args = parser.parse_args()
 
     # 2. Load System Instructions
@@ -129,13 +143,13 @@ def main():
         print(f"{prg_name}: '{args.system}' loaded", file=sys.stderr)
 
     # Authenticate
-    api_key = os.environ.get("GEMINI_API_KEY")
+    api_key = os.environ.get(args.key_var)
     if not api_key:
-        print("Error: GEMINI_API_KEY not found in environment.", file=sys.stderr)
+        print(f"Error: {args.key_var} not found in environment.", file=sys.stderr)
         return
     client = genai.Client(api_key=api_key)
     if args.DEBUG:
-        print(f"{prg_name}: 'GEMINI_APY_KEY' read", file=sys.stderr)
+        print(f"{prg_name}: {args.key_var} read", file=sys.stderr)
 
     # Preparar directorios de salida
     md_output_path = Path(args.md_dir) if args.md_dir else None
@@ -155,7 +169,11 @@ def main():
                 f"{prg_name}: will use '{pdf_output_path}' for PDFs",
                 file=sys.stderr,
             )
-
+    if args.DEBUG and args.pdf_dir:
+        print(
+            f"{prg_name}: using {args.libpath_var} for shared objects",
+            file=sys.stderr,
+        )
     for file_str in tqdm(args.files, desc="Processing", unit="file"):
         file_path = Path(file_str)
         if not file_path.exists():
@@ -229,12 +247,12 @@ def main():
                         local_env = os.environ.copy()
                         # Agrego la ruta de MacPorts
                         macports_lib = args.macports_lib
-                        if "DYLD_LIBRARY_PATH" in local_env:
-                            local_env["DYLD_LIBRARY_PATH"] = (
-                                f"{macports_lib}:{local_env['DYLD_LIBRARY_PATH']}"
+                        if args.libpath_var in local_env:
+                            local_env[args.libpath_var] = (
+                                f"{macports_lib}:{local_env[args.libpath_var]}"
                             )
                         else:
-                            local_env["DYLD_LIBRARY_PATH"] = macports_lib
+                            local_env[args.libpath_var] = macports_lib
                         if args.DEBUG:
                             tqdm.write(f"DEBUG: {pdf_cmd=}")
 
